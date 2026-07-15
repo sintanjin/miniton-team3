@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../data/ai_api.dart';
+import '../data/school_data.dart';
 import 'checklist_page.dart';
 import 'landing_page.dart';
 
@@ -15,59 +17,56 @@ class AiRecommendationPage extends StatefulWidget {
 class _AiRecommendationPageState extends State<AiRecommendationPage> {
   static const _primary = Color(0xFF5661E8);
   static const _bg = Color(0xFFF7F8FC);
-  static const _schoolNames = [
-    '{g,yeo,ng}{b,u,g} {ng,yeo,ng}{ng,ya,ng} OO{b,u,n}{g,yo}',
-    '{g,yeo,ng}{b,u,g} {b,o,ng}{h,wa} OO{ch,o}{g,yo}',
-    '{g,yeo,ng}{b,u,g} {ng,ui}{s,eo,ng} OO{h,a,g}{g,yo}',
-  ];
-
-  static const _models = [
-    _RecommendationModel(
-      rank: 'Best 1',
-      title: '{j,a}{ng,yeo,n} {ch,e}{h,eo,m} · camping {g,o,ng}{g,a,n}',
-      description: '{g,ye}{g,o,g}{ng,wa} {d,eu,ng}{s,a,n}{r,o}{g,a} {g,a}{kk,a}{ng,wo} {j,a}{ng,yeo,n} {ch,e}{h,eo,m} program{ng,wa} {ng,yeo,n}{g,ye}{h,a}{g,i} {j,o}{s,eu,b}{n,i}{d,a}.',
-      goodOne: '{ng,u,n}{d,o,ng}{j,a,ng}{ng,eu,l} camping {g,o,ng}{g,a,n}{ng,eu}{r,o} {h,wa,l}{ng,yo,ng} {g,a}{n,eu,ng}',
-      goodTwo: '{g,ye}{g,o,g} {g,wa,n}{g,wa,ng}{g,a}{ng,wa} {ng,yeo,n}{g,ye} {g,a}{n,eu,ng}',
-      riskOne: '{d,ae}{j,u,ng}{g,yo}{t,o,ng} {j,eo,b}{g,eu,n}{s,eo,ng}{ng,i} {n,a,j}{ng,eu,m}',
-      riskTwo: '{g,yeo}{ng,u,l}{ch,eo,l} {ng,u,n}{ng,yeo,ng} {j,e}{ng,ya,g}',
-    ),
-    _RecommendationModel(
-      rank: 'Best 2',
-      title: '{ng,yu}{ng,a} · family {ch,e}{h,eo,m}{s,e,n}{t,eo}',
-      description: '{j,u}{b,yeo,n} {ng,yu}{ng,a} {ng,i,n}{g,u}{g,a} {m,a,n}{ng,a} {g,a}{j,o,g} {d,a,n}{ng,wi} {ch,e}{h,eo,m} {s,u}{ng,yo}{g,a} {ng,i,ss}{s,eu,b}{n,i}{d,a}.',
-      goodOne: '{g,yo}{s,i,l}{ng,eu,l} class room{ng,eu}{r,o} {j,ae}{g,u}{s,eo,ng} {s,u}{ng,wo,l}',
-      goodTwo: '{j,u}{b,yeo,n} {ng,a}{p,a}{t,eu} {d,a,n}{j,i}{ng,wa} {ng,yeo,n}{g,ye} {g,a}{n,eu,ng}',
-      riskOne: '{ng,a,n}{j,eo,n} {g,wa,n}{r,i} {ng,i,n}{r,yeo,g} {p,i,l}{ng,yo}',
-      riskTwo: '{s,i}{s,eo,l} {ng,i,l}{b,u} {b,o}{s,u} {p,i,l}{ng,yo}',
-    ),
-    _RecommendationModel(
-      rank: 'Best 3',
-      title: '{m,a}{ng,eu,l} creator studio',
-      description: '{d,o}{s,eo}{g,wa,n}{ng,wa} {g,yo}{s,i,l}{ng,eu,l} {h,wa,l}{ng,yo,ng}{h,ae} {j,i}{ng,yeo,g} {ch,ae}{ng,yeo,n}{ng,wa} {s,o}{g,yu}{g,yu} program{ng,eu,l} {ng,u,n}{ng,yeo,ng}{h,a,l} {s,u} {ng,i,ss}{s,eu,b}{n,i}{d,a}.',
-      goodOne: '{g,yo}{s,i,l} {g,o,ng}{g,a,n} {j,ae}{h,wa,l}{ng,yo,ng} {s,u}{ng,wo,l}',
-      goodTwo: '{ch,eo}{ng,yeo,n} · {m,a}{ng,eu,l} {g,i}{ng,eo,b} {h,yeo,b}{ng,eo,b} {g,a}{n,eu,ng}',
-      riskOne: '{ch,o}{g,i} {h,o}{b,o} {b,i}{ng,yo,ng} {p,i,l}{ng,yo}',
-      riskTwo: '{j,i}{s,o,g} {ng,u,n}{ng,yeo,ng} {s,u}{ng,i,g} {g,u}{j,o} {p,i,l}{ng,yo}',
-    ),
-  ];
 
   int? _selected;
+  Future<_RecommendationPageData>? _future;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _future ??= _load();
+  }
+
+  Future<_RecommendationPageData> _load() async {
+    final argument = ModalRoute.of(context)?.settings.arguments;
+    if (argument is! String || argument.isEmpty) {
+      throw const AiApiException(
+        code: 'SCHOOL_DATA_MISSING',
+        message: '선택한 학교 정보를 찾을 수 없습니다.',
+      );
+    }
+    final school = await SchoolRepository.loadSchool(argument);
+    final response = await AiApiService.instance.getRecommendations(school);
+    return _RecommendationPageData(school: school, response: response);
+  }
+
+  void _retry() {
+    setState(() {
+      _selected = null;
+      _future = _load();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    final schoolIndex = ((ModalRoute.of(context)?.settings.arguments as int?) ?? 0)
-        .clamp(0, _schoolNames.length - 1)
-        .toInt();
-
     return Scaffold(
       backgroundColor: _bg,
       body: SingleChildScrollView(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 1180),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 28),
-              child: Column(
+        child: Stack(
+          children: [
+          const Positioned(
+            left: 0,
+            right: 0,
+            top: 0,
+            height: 92,
+            child: ColoredBox(color: Color(0xFFFCFDFF)),
+          ),
+            Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 1180),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 28),
+                  child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const SizedBox(height: 34),
@@ -75,40 +74,70 @@ class _AiRecommendationPageState extends State<AiRecommendationPage> {
                   const SizedBox(height: 84),
                   const _StepProgress(),
                   const SizedBox(height: 88),
-                  Text(
-                    '${K.h(_schoolNames[schoolIndex])}${K.h('{ng,e} {ng,eo}{ng,u,l}{r,i}{n,eu,n} {h,wa,l}{ng,yo,ng}{m,o}{d,e,l} TOP 3')}',
-                    style: const TextStyle(fontSize: 34, fontWeight: FontWeight.w800, color: Colors.black, letterSpacing: 0),
-                  ),
-                  const SizedBox(height: 42),
-                  ...List.generate(
-                    _models.length,
-                    (index) => Padding(
-                      padding: EdgeInsets.only(bottom: index == _models.length - 1 ? 0 : 22),
-                      child: _RecommendationCard(
-                        model: _models[index],
-                        selected: _selected == index,
-                        onTap: () => setState(() => _selected = index),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 88),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      _NavButton(
-                        label: K.h('{ng,i}{j,eo,n} {d,a,n}{g,ye}{r,o}'),
-                        icon: Icons.arrow_back,
-                        onPressed: () => Navigator.of(context).pop(),
-                      ),
-                      _NavButton(
-                        label: K.h('{d,a}{ng,eu,m} {d,a,n}{g,ye}{r,o}'),
-                        icon: Icons.arrow_forward,
-                        primary: _selected != null,
-                        onPressed: _selected == null
-                            ? null
-                            : () => Navigator.of(context).pushNamed(ChecklistPage.routeName),
-                      ),
-                    ],
+                  FutureBuilder<_RecommendationPageData>(
+                    future: _future,
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const _ApiStatusPanel.loading();
+                      }
+                      if (snapshot.hasError || !snapshot.hasData) {
+                        return _ApiStatusPanel.error(
+                          message: snapshot.error is AiApiException
+                              ? (snapshot.error! as AiApiException).message
+                              : '추천 결과를 불러오지 못했습니다.',
+                          onRetry: _retry,
+                        );
+                      }
+                      final data = snapshot.data!;
+                      final models = data.response.recommendations;
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '${data.school.name}에 어울리는 활용모델 TOP 3',
+                            style: const TextStyle(fontSize: 34, fontWeight: FontWeight.w800, color: Colors.black, letterSpacing: 0),
+                          ),
+                          const SizedBox(height: 42),
+                          ...List.generate(
+                            models.length,
+                            (index) => Padding(
+                              padding: EdgeInsets.only(bottom: index == models.length - 1 ? 0 : 22),
+                              child: _RecommendationCard(
+                                model: models[index],
+                                selected: _selected == index,
+                                onTap: () => setState(() => _selected = index),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 88),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              _NavButton(
+                                label: K.h('{ng,i}{j,eo,n} {d,a,n}{g,ye}{r,o}'),
+                                icon: Icons.arrow_back,
+                                onPressed: () => Navigator.of(context).pop(),
+                              ),
+                              _NavButton(
+                                label: K.h('{d,a}{ng,eu,m} {d,a,n}{g,ye}{r,o}'),
+                                icon: Icons.arrow_forward,
+                                primary: _selected != null,
+                                onPressed: _selected == null
+                                    ? null
+                                    : () => Navigator.of(context).pushNamed(
+                                          ChecklistPage.routeName,
+                                          arguments: FinalCheckpointArguments.recommendation(
+                                            schoolId: data.school.id,
+                                            analysisId: data.response.analysisId,
+                                            recommendation: models[_selected!],
+                                          ),
+                                        ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      );
+                    },
                   ),
                   const SizedBox(height: 110),
                   const Divider(color: Color(0xFFD6D8E0)),
@@ -116,10 +145,12 @@ class _AiRecommendationPageState extends State<AiRecommendationPage> {
                   const _Footer(),
                   const SizedBox(height: 34),
                 ],
+                  ),
+                ),
               ),
             ),
-          ),
-        ),
+        ],
+      ),
       ),
     );
   }
@@ -132,7 +163,7 @@ class _RecommendationCard extends StatefulWidget {
     required this.onTap,
   });
 
-  final _RecommendationModel model;
+  final RecommendationItem model;
   final bool selected;
   final VoidCallback onTap;
 
@@ -158,7 +189,6 @@ class _RecommendationCardState extends State<_RecommendationCard> {
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 170),
             curve: Curves.easeOutCubic,
-            constraints: const BoxConstraints(minHeight: 270),
             padding: const EdgeInsets.fromLTRB(46, 44, 46, 44),
             decoration: BoxDecoration(
               color: Colors.white,
@@ -175,26 +205,29 @@ class _RecommendationCardState extends State<_RecommendationCard> {
                 ),
               ],
             ),
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final compact = constraints.maxWidth < 760;
-                return compact
-                    ? Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _RecommendationText(model: widget.model),
-                          const SizedBox(height: 24),
-                          _TagColumn(model: widget.model),
-                        ],
-                      )
-                    : Row(
-                        children: [
-                          Expanded(flex: 3, child: _RecommendationText(model: widget.model)),
-                          const SizedBox(width: 44),
-                          Expanded(flex: 2, child: _TagColumn(model: widget.model)),
-                        ],
-                      );
-              },
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 270),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final compact = constraints.maxWidth < 760;
+                  return compact
+                      ? Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _RecommendationText(model: widget.model),
+                            const SizedBox(height: 24),
+                            _TagColumn(model: widget.model),
+                          ],
+                        )
+                      : Row(
+                          children: [
+                            Expanded(flex: 3, child: _RecommendationText(model: widget.model)),
+                            const SizedBox(width: 44),
+                            Expanded(flex: 2, child: _TagColumn(model: widget.model)),
+                          ],
+                        );
+                },
+              ),
             ),
           ),
         ),
@@ -206,7 +239,7 @@ class _RecommendationCardState extends State<_RecommendationCard> {
 class _RecommendationText extends StatelessWidget {
   const _RecommendationText({required this.model});
 
-  final _RecommendationModel model;
+  final RecommendationItem model;
 
   @override
   Widget build(BuildContext context) {
@@ -214,15 +247,15 @@ class _RecommendationText extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        _SoftTag(text: model.rank, positive: true),
+        _SoftTag(text: 'Best ${model.rank}', positive: true),
         const SizedBox(height: 58),
         Text(
-          K.h(model.title),
+          model.title,
           style: const TextStyle(fontSize: 25, fontWeight: FontWeight.w800, color: Colors.black),
         ),
         const SizedBox(height: 12),
         Text(
-          K.h(model.description),
+          model.description,
           style: const TextStyle(fontSize: 18, height: 1.45, color: Colors.black),
         ),
       ],
@@ -233,7 +266,7 @@ class _RecommendationText extends StatelessWidget {
 class _TagColumn extends StatelessWidget {
   const _TagColumn({required this.model});
 
-  final _RecommendationModel model;
+  final RecommendationItem model;
 
   @override
   Widget build(BuildContext context) {
@@ -241,13 +274,15 @@ class _TagColumn extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        _SoftTag(text: K.h(model.goodOne), positive: true),
-        const SizedBox(height: 10),
-        _SoftTag(text: K.h(model.goodTwo), positive: true),
-        const SizedBox(height: 24),
-        _SoftTag(text: K.h(model.riskOne), positive: false),
-        const SizedBox(height: 10),
-        _SoftTag(text: K.h(model.riskTwo), positive: false),
+        for (final strength in model.strengths) ...[
+          _SoftTag(text: strength, positive: true),
+          const SizedBox(height: 10),
+        ],
+        const SizedBox(height: 14),
+        for (final risk in model.risks) ...[
+          _SoftTag(text: risk, positive: false),
+          const SizedBox(height: 10),
+        ],
       ],
     );
   }
@@ -412,22 +447,45 @@ class _Footer extends StatelessWidget {
   static const _style = TextStyle(fontSize: 13, color: Color(0xFF777980), fontWeight: FontWeight.w500);
 }
 
-class _RecommendationModel {
-  const _RecommendationModel({
-    required this.rank,
-    required this.title,
-    required this.description,
-    required this.goodOne,
-    required this.goodTwo,
-    required this.riskOne,
-    required this.riskTwo,
-  });
+class _RecommendationPageData {
+  const _RecommendationPageData({required this.school, required this.response});
 
-  final String rank;
-  final String title;
-  final String description;
-  final String goodOne;
-  final String goodTwo;
-  final String riskOne;
-  final String riskTwo;
+  final SchoolData school;
+  final RecommendationResponse response;
+}
+
+class _ApiStatusPanel extends StatelessWidget {
+  const _ApiStatusPanel.loading()
+      : message = 'AI가 활용모델을 분석하고 있습니다.',
+        onRetry = null;
+
+  const _ApiStatusPanel.error({required this.message, required this.onRetry});
+
+  final String message;
+  final VoidCallback? onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      height: 430,
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (onRetry == null)
+              const CircularProgressIndicator(color: _AiRecommendationPageState._primary)
+            else
+              const Icon(Icons.error_outline, size: 42, color: Color(0xFFFF5A64)),
+            const SizedBox(height: 20),
+            Text(message, style: const TextStyle(fontSize: 18, color: Color(0xFF55575E))),
+            if (onRetry != null) ...[
+              const SizedBox(height: 22),
+              FilledButton(onPressed: onRetry, child: const Text('다시 시도')),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../data/school_data.dart';
 import 'idea_page.dart';
 import 'landing_page.dart';
 
@@ -9,65 +10,96 @@ class SchoolDetailPage extends StatelessWidget {
   static const routeName = '/school-detail';
   static const _primary = Color(0xFF5661E8);
   static const _bg = Color(0xFFF7F8FC);
+  static const _headerBg = Color(0xFFFCFDFF);
 
-  static const _details = [
-    _SchoolDetail(
-      image: 'assets/images/candidate_01.jpg',
-      name: '{g,yeo,ng}{b,u,g} {ng,yeo,ng}{ng,ya,ng} OO{b,u,n}{g,yo}',
-      size: '{d,ae}{j,i} 4,500m2 - {g,yo}{s,i,l} 8{s,i,l} - {g,a,ng}{d,a,ng} {b,o}{ng,yu}',
-      condition: '{b,i}{g,yo}{j,eo,g} {s,i,n}{ch,u,g} - {ng,yu}{j,i}{g,wa,n}{r,i} {ng,ya,ng}{h,o}',
-      facility: '{j,eo,n}{g,i} - {h,wa}{j,a,ng}{s,i,l} {ng,ya,ng}{h,o} - {n,ae,ng}{n,a,n}{b,a,ng} {s,eo,l}{b,i} {b,o}{ng,yu}',
-      access: '{g,u,g}{d,o} {ng,i,n}{j,eo,b} - {d,ae}{j,u,ng}{g,yo}{t,o,ng} {h,a}{r,u} 8{h,oe}',
-      resource: '{h,ae}{s,u}{ng,yo,g}{j,a,ng}, {g,wa,n}{g,wa,ng}{d,a,n}{j,i}, {h,a,g}{ng,wo,n}{g,a} {ng,i,n}{j,eo,b}',
-      demand: '{j,u}{b,yeo,n} {ng,a}{p,a}{t,eu} {d,a,n}{j,i} - {ng,yu}{ng,a} {ng,i,n}{g,u} {d,a}{s,u}',
-    ),
-    _SchoolDetail(
-      image: 'assets/images/candidate_02.png',
-      name: '{g,yeo,ng}{b,u,g} {b,o,ng}{h,wa} OO{ch,o}{g,yo}',
-      size: '{d,ae}{j,i} 3,100m2 - {g,yo}{s,i,l} 6{s,i,l} - {ng,u,n}{d,o,ng}{j,a,ng} {b,o}{ng,yu}',
-      condition: '{ng,oe}{g,wa,n} {n,o}{h,u} - {ng,o,g}{s,a,ng} {m,i,ch} {ch,a,ng}{h,o} {s,u}{r,i} {p,i,l}{ng,yo}',
-      facility: '{j,eo,n}{g,i} {ng,ya,ng}{h,o} - {h,wa}{j,a,ng}{s,i,l} {ng,i,l}{b,u} {g,ae}{s,eo,n} {p,i,l}{ng,yo}',
-      access: '{m,a}{ng,eu,l}{b,eo}{s,eu} {j,eo,ng}{r,yu}{j,a,ng} {ng,i,n}{j,eo,b} - {s,a,n}{r,i,m} {j,i,n}{ng,i,b} {s,u}{ng,wo,l}',
-      resource: '{s,a,n}{ch,ae,g}{r,o}, {g,u,n}{m,i,n} {ch,ae}{ng,yu,g}{s,i}{s,eo,l}, {j,i}{ng,yeo,g} {n,o,ng}{s,a,n}{m,u,l}',
-      demand: '{ch,e}{h,eo,m} {g,yo}{ng,yu,g} - {j,u}{m,a,l} {g,a}{j,o,g} program {s,u}{ng,yo}',
-    ),
-    _SchoolDetail(
-      image: 'assets/images/candidate_03.png',
-      name: '{g,yeo,ng}{b,u,g} {ng,ui}{s,eo,ng} OO{h,a,g}{g,yo}',
-      size: '{d,ae}{j,i} 2,650m2 - {g,yo}{s,i,l} 5{s,i,l} - {d,o}{s,eo}{g,wa,n} {b,o}{ng,yu}',
-      condition: '{g,u}{j,o} {ng,ya,ng}{h,o} - {ng,oe}{b,u} {d,e}{k,eu} {j,ae}{j,eo,ng}{b,i} {p,i,l}{ng,yo}',
-      facility: '{j,eo,n}{g,i} {b,o}{t,o,ng} - {h,wa}{j,a,ng}{s,i,l} {ng,ya,ng}{h,o} - {ch,wi}{s,a}{s,i}{s,eo,l} {b,o}{ng,yu}',
-      access: '{m,a}{ng,eu,l} {j,u,ng}{s,i,m}{j,i} - {g,u,n}{ch,eo,ng} {ch,a}{r,ya,ng} 10{b,u,n}',
-      resource: '{m,a}{ng,eu,l}{h,oe}{g,wa,n}, {j,e}{b,a,ng}{j,a}{ch,i}{d,a,n}{ch,e}, {j,ae}{r,ae}{s,i}{j,a,ng}',
-      demand: '{ng,o}{r,eu}{s,i,n} {d,o,l}{b,o,m} - {m,a}{ng,eu,l} {g,o,ng}{d,o,ng}{ch,e} {g,o,ng}{g,a,n} {s,u}{ng,yo}',
-    ),
+  static const _firstPageIds = [
+    'school_020_635ebe81',
+    'school_013_ebd790b9',
+    'school_006_399695cc',
+    'school_025_6988acc6',
+    'school_010_33ea8204',
+    'school_038_3e2104df',
   ];
+
+  static List<SchoolData> _orderedSchools(List<SchoolData> schools) {
+    final firstPage = <SchoolData>[];
+    for (final id in _firstPageIds) {
+      final matches = schools.where((school) => school.id == id);
+      if (matches.isNotEmpty) firstPage.add(matches.first);
+    }
+
+    final pinnedIds = firstPage.map((school) => school.id).toSet();
+    final others = schools.where((school) => !pinnedIds.contains(school.id)).toList();
+    return [...firstPage, ...others];
+  }
+
+  static _SelectedSchool _selectSchool(List<SchoolData> schools, Object? argument) {
+    final ordered = _orderedSchools(schools);
+    if (argument is String) {
+      final index = ordered.indexWhere((school) => school.id == argument);
+      if (index >= 0) return _SelectedSchool(ordered[index], index);
+    }
+    if (argument is int) {
+      final safeIndex = argument.clamp(0, ordered.length - 1).toInt();
+      return _SelectedSchool(ordered[safeIndex], safeIndex);
+    }
+    return _SelectedSchool(ordered.first, 0);
+  }
 
   @override
   Widget build(BuildContext context) {
-    final index = (ModalRoute.of(context)?.settings.arguments as int?) ?? 0;
-    final safeIndex = index.clamp(0, _details.length - 1).toInt();
-    final detail = _details[safeIndex];
+    final argument = ModalRoute.of(context)?.settings.arguments;
 
     return Scaffold(
       backgroundColor: _bg,
       body: SingleChildScrollView(
-        child: Column(
+        child: Stack(
           children: [
-            _Header(detail: detail),
-            _ImageStage(schoolIndex: safeIndex, detail: detail),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(28, 58, 28, 34),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 1180),
-                child: Column(
-                  children: const [
-                    Divider(color: Color(0xFFD6D8E0)),
-                    SizedBox(height: 50),
-                    _Footer(),
+            const Positioned(
+              left: 0,
+              right: 0,
+              top: 0,
+              height: 92,
+              child: ColoredBox(color: _headerBg),
+            ),
+            FutureBuilder<List<SchoolData>>(
+              future: SchoolRepository.loadSchools(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const SizedBox(
+                    height: 720,
+                    child: Center(child: CircularProgressIndicator(color: _primary)),
+                  );
+                }
+                if (snapshot.hasError || !snapshot.hasData || snapshot.data!.isEmpty) {
+                  return const SizedBox(
+                    height: 720,
+                    child: Center(child: Text('Data load failed')),
+                  );
+                }
+
+                final selected = _selectSchool(snapshot.data!, argument);
+
+                return Column(
+                  children: [
+                    _Header(school: selected.school),
+                    _ImageStage(selected: selected),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(28, 58, 28, 34),
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 1180),
+                        child: Column(
+                          children: const [
+                            Divider(color: Color(0xFFD6D8E0)),
+                            SizedBox(height: 50),
+                            _Footer(),
+                          ],
+                        ),
+                      ),
+                    ),
                   ],
-                ),
-              ),
+                );
+              },
             ),
           ],
         ),
@@ -77,14 +109,13 @@ class SchoolDetailPage extends StatelessWidget {
 }
 
 class _Header extends StatelessWidget {
-  const _Header({required this.detail});
+  const _Header({required this.school});
 
-  final _SchoolDetail detail;
+  final SchoolData school;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      color: SchoolDetailPage._bg,
+    return Padding(
       padding: const EdgeInsets.fromLTRB(28, 34, 28, 42),
       child: Center(
         child: ConstrainedBox(
@@ -97,7 +128,7 @@ class _Header extends StatelessWidget {
               const _StepProgress(),
               const SizedBox(height: 88),
               Text(
-                K.h(detail.name),
+                school.name,
                 style: const TextStyle(fontSize: 36, fontWeight: FontWeight.w800, letterSpacing: 0),
               ),
             ],
@@ -109,19 +140,28 @@ class _Header extends StatelessWidget {
 }
 
 class _ImageStage extends StatelessWidget {
-  const _ImageStage({required this.schoolIndex, required this.detail});
+  const _ImageStage({required this.selected});
 
-  final int schoolIndex;
-  final _SchoolDetail detail;
+  final _SelectedSchool selected;
 
   @override
   Widget build(BuildContext context) {
+    final image = selected.school.image;
+    final hasImage = image != null && image.isNotEmpty;
+
     return SizedBox(
-      height: 720,
+      height: hasImage ? 720 : 430,
       child: Stack(
         fit: StackFit.expand,
         children: [
-          Image.asset(detail.image, fit: BoxFit.cover),
+          if (hasImage)
+            Image.asset(
+              image,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) => const ColoredBox(color: SchoolDetailPage._bg),
+            )
+          else
+            const ColoredBox(color: SchoolDetailPage._bg),
           Align(
             alignment: Alignment.topCenter,
             child: Container(
@@ -132,7 +172,7 @@ class _ImageStage extends StatelessWidget {
                   constraints: const BoxConstraints(maxWidth: 1180),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 28),
-                    child: _InfoGrid(detail: detail),
+                    child: _InfoGrid(school: selected.school),
                   ),
                 ),
               ),
@@ -141,7 +181,7 @@ class _ImageStage extends StatelessWidget {
           Positioned(
             left: 0,
             right: 0,
-            bottom: 310,
+            bottom: hasImage ? 310 : 46,
             child: Center(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 1180),
@@ -161,7 +201,7 @@ class _ImageStage extends StatelessWidget {
                         primary: true,
                         onPressed: () => Navigator.of(context).pushNamed(
                           IdeaPage.routeName,
-                          arguments: schoolIndex,
+                          arguments: selected.school.id,
                         ),
                       ),
                     ],
@@ -177,50 +217,123 @@ class _ImageStage extends StatelessWidget {
 }
 
 class _InfoGrid extends StatelessWidget {
-  const _InfoGrid({required this.detail});
+  const _InfoGrid({required this.school});
 
-  final _SchoolDetail detail;
+  final SchoolData school;
+
+  String get _size {
+    final land = school.landAreaSqm == null ? '-' : '${_formatNumber(school.landAreaSqm!)}m²';
+    final building = school.buildingAreaSqm == null ? '-' : '${_formatNumber(school.buildingAreaSqm!)}m²';
+    return '${K.h('{d,ae}{j,i}')} $land · ${K.h('{g,eo,n}{m,u,l}')} $building';
+  }
+
+  String get _closedDate {
+    final closed = school.closedDate.trim();
+    return closed.isEmpty ? '-' : closed;
+  }
+
+  String get _plan {
+    final plan = school.plan.trim();
+    return plan.isEmpty || plan == '-' ? '-' : plan;
+  }
+
+  String get _access {
+    final parts = school.address.split(RegExp(r'\s+')).where((part) => part.trim().isNotEmpty).toList();
+    if (parts.length >= 2) return '${parts[0]} ${parts[1]} ${K.h('{ng,i,n}{g,eu,n}')}';
+    return school.address;
+  }
+
+  String get _nearbyResources {
+    final resources = school.nearbyResources.trim();
+    return resources.isEmpty || resources == '-' ? '-' : resources;
+  }
 
   @override
   Widget build(BuildContext context) {
     final items = [
-      (K.h('{g,yu}{m,o}'), K.h(detail.size)),
-      (K.h('{s,i}{s,eo,l} {s,a,ng}{t,ae}'), K.h(detail.condition)),
-      (K.h('{s,i}{s,eo,l} {s,e}{b,u}'), K.h(detail.facility)),
-      (K.h('{j,eo,b}{g,eu,n}{s,eo,ng}'), K.h(detail.access)),
-      (K.h('{j,u}{b,yeo,n} {j,a}{ng,wo,n}'), K.h(detail.resource)),
-      (K.h('{j,i}{ng,yeo,g} {s,u}{ng,yo}'), K.h(detail.demand)),
+      (K.h('{g,yu}{m,o}'), _size),
+      (K.h('{p,ye}{g,yo}{ng,i,l}'), _closedDate),
+      (K.h('{ch,u}{j,i,n} {g,ye}{h,oe,g}'), _plan),
     ];
 
-    return GridView.builder(
-      padding: EdgeInsets.zero,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
-        mainAxisExtent: 82,
-        crossAxisSpacing: 44,
-        mainAxisSpacing: 16,
-      ),
-      itemCount: items.length,
-      itemBuilder: (context, index) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const gap = 44.0;
+        final columnWidth = (constraints.maxWidth - gap * 2) / 3;
+
         return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(
-              items[index].$1,
-              style: const TextStyle(color: Colors.white, fontSize: 19, fontWeight: FontWeight.w600),
+            Row(
+              children: [
+                for (var index = 0; index < items.length; index++) ...[
+                  if (index > 0) const SizedBox(width: gap),
+                  SizedBox(
+                    width: columnWidth,
+                    child: _InfoItem(title: items[index].$1, value: items[index].$2),
+                  ),
+                ],
+              ],
             ),
-            const SizedBox(height: 10),
-            Text(
-              items[index].$2,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(color: Colors.white, fontSize: 18, height: 1.35),
+            const SizedBox(height: 22),
+            Row(
+              children: [
+                SizedBox(
+                  width: columnWidth,
+                  child: _InfoItem(
+                    title: K.h('{j,eo,b}{g,eu,n}{s,eo,ng}'),
+                    value: _access,
+                  ),
+                ),
+                const SizedBox(width: gap),
+                SizedBox(
+                  width: columnWidth * 2 + gap,
+                  child: _InfoItem(
+                    title: K.h('{j,u}{b,yeo,n} {j,a}{ng,wo,n}'),
+                    value: _nearbyResources,
+                    maxLines: 3,
+                  ),
+                ),
+              ],
             ),
           ],
         );
       },
+    );
+  }
+}
+
+class _InfoItem extends StatelessWidget {
+  const _InfoItem({
+    required this.title,
+    required this.value,
+    this.maxLines = 2,
+  });
+
+  final String title;
+  final String value;
+  final int maxLines;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 82,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(color: Colors.white, fontSize: 19, fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            value,
+            maxLines: maxLines,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(color: Colors.white, fontSize: 18, height: 1.35),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -244,6 +357,13 @@ class _NavButton extends StatelessWidget {
 
     return FilledButton(
       onPressed: onPressed,
+      style: FilledButton.styleFrom(
+        backgroundColor: primary ? SchoolDetailPage._primary : Colors.white,
+        foregroundColor: primary ? Colors.white : const Color(0xFF2E2F34),
+        padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 22),
+        shape: const StadiumBorder(),
+        textStyle: const TextStyle(fontSize: 21, fontWeight: FontWeight.w700),
+      ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -253,13 +373,6 @@ class _NavButton extends StatelessWidget {
           if (forward) const SizedBox(width: 34),
           if (forward) Icon(icon, size: 28),
         ],
-      ),
-      style: FilledButton.styleFrom(
-        backgroundColor: primary ? SchoolDetailPage._primary : Colors.white,
-        foregroundColor: primary ? Colors.white : const Color(0xFF2E2F34),
-        padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 22),
-        shape: const StadiumBorder(),
-        textStyle: const TextStyle(fontSize: 21, fontWeight: FontWeight.w700),
       ),
     );
   }
@@ -356,24 +469,19 @@ class _Footer extends StatelessWidget {
   static const _style = TextStyle(fontSize: 13, color: Color(0xFF777980), fontWeight: FontWeight.w500);
 }
 
-class _SchoolDetail {
-  const _SchoolDetail({
-    required this.image,
-    required this.name,
-    required this.size,
-    required this.condition,
-    required this.facility,
-    required this.access,
-    required this.resource,
-    required this.demand,
-  });
+class _SelectedSchool {
+  const _SelectedSchool(this.school, this.index);
 
-  final String image;
-  final String name;
-  final String size;
-  final String condition;
-  final String facility;
-  final String access;
-  final String resource;
-  final String demand;
+  final SchoolData school;
+  final int index;
+}
+
+String _formatNumber(num value) {
+  final text = value.round().toString();
+  final buffer = StringBuffer();
+  for (var i = 0; i < text.length; i++) {
+    if (i > 0 && (text.length - i) % 3 == 0) buffer.write(',');
+    buffer.write(text[i]);
+  }
+  return buffer.toString();
 }

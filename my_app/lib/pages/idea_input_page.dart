@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../data/ai_api.dart';
+import '../data/school_data.dart';
 import 'checklist_page.dart';
 import 'landing_page.dart';
 
@@ -24,19 +26,33 @@ class _IdeaInputPageState extends State<IdeaInputPage> {
     super.dispose();
   }
 
-  bool get _hasText => _controller.text.trim().isNotEmpty;
+  bool get _hasText {
+    final length = _controller.text.trim().length;
+    return length >= 10 && length <= 500;
+  }
 
   @override
   Widget build(BuildContext context) {
+    final argument = ModalRoute.of(context)?.settings.arguments;
+    final schoolId = argument is String ? argument : '';
     return Scaffold(
       backgroundColor: _bg,
       body: SingleChildScrollView(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 1180),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 28),
-              child: Column(
+        child: Stack(
+          children: [
+          const Positioned(
+            left: 0,
+            right: 0,
+            top: 0,
+            height: 92,
+            child: ColoredBox(color: Color(0xFFFCFDFF)),
+          ),
+            Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 1180),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 28),
+                  child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const SizedBox(height: 34),
@@ -91,7 +107,10 @@ class _IdeaInputPageState extends State<IdeaInputPage> {
                         onPressed: _hasText
                             ? () => Navigator.of(context).pushNamed(
                                   IdeaReviewPage.routeName,
-                                  arguments: _controller.text.trim(),
+                                  arguments: IdeaEvaluationArguments(
+                                    schoolId: schoolId,
+                                    idea: _controller.text.trim(),
+                                  ),
                                 )
                             : null,
                       ),
@@ -103,36 +122,72 @@ class _IdeaInputPageState extends State<IdeaInputPage> {
                   const _Footer(),
                   const SizedBox(height: 34),
                 ],
+                  ),
+                ),
               ),
             ),
-          ),
-        ),
+        ],
+      ),
       ),
     );
   }
 }
 
-class IdeaReviewPage extends StatelessWidget {
+class IdeaReviewPage extends StatefulWidget {
   const IdeaReviewPage({super.key});
 
   static const routeName = '/idea-review';
+
+  @override
+  State<IdeaReviewPage> createState() => _IdeaReviewPageState();
+}
+
+class _IdeaReviewPageState extends State<IdeaReviewPage> {
   static const _bg = Color(0xFFF7F8FC);
   static const _primary = Color(0xFF5661E8);
 
+  Future<IdeaEvaluationResponse>? _future;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _future ??= _load();
+  }
+
+  Future<IdeaEvaluationResponse> _load() async {
+    final argument = ModalRoute.of(context)?.settings.arguments;
+    if (argument is! IdeaEvaluationArguments || argument.schoolId.isEmpty) {
+      throw const AiApiException(
+        code: 'SCHOOL_DATA_MISSING',
+        message: '학교 또는 아이디어 정보를 찾을 수 없습니다.',
+      );
+    }
+    final school = await SchoolRepository.loadSchool(argument.schoolId);
+    return AiApiService.instance.evaluateIdea(school: school, idea: argument.idea);
+  }
+
+  void _retry() => setState(() => _future = _load());
+
   @override
   Widget build(BuildContext context) {
-    final idea = (ModalRoute.of(context)?.settings.arguments as String?) ??
-        K.h('{ng,i} {p,ye}{g,yo}{r,eu,l} {ng,yu}{ng,a} {ch,e}{h,eo,m}{s,e,n}{t,eo}{r,o} {h,wa,l}{ng,yo,ng}{h,a}{g,o} {s,i,p}{ng,eo}{ng,yo}.');
-
     return Scaffold(
       backgroundColor: _bg,
       body: SingleChildScrollView(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 1180),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 28),
-              child: Column(
+        child: Stack(
+          children: [
+          const Positioned(
+            left: 0,
+            right: 0,
+            top: 0,
+            height: 92,
+            child: ColoredBox(color: Color(0xFFFCFDFF)),
+          ),
+            Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 1180),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 28),
+                  child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const SizedBox(height: 34),
@@ -140,100 +195,438 @@ class IdeaReviewPage extends StatelessWidget {
                   const SizedBox(height: 84),
                   const _StepProgress(activeUntil: 2),
                   const SizedBox(height: 88),
-                  Text(
-                    K.h('idea{ng,ui} {j,eo,g}{h,a,b}{s,eo,ng}{ng,eu,l} {p,a,n}{d,a,n}{h,ae} {d,eu}{r,yeo}{ng,yo}.'),
-                    style: const TextStyle(fontSize: 34, fontWeight: FontWeight.w800, color: Colors.black, letterSpacing: 0),
+                  FutureBuilder<IdeaEvaluationResponse>(
+                    future: _future,
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const _IdeaApiStatus.loading();
+                      }
+                      if (snapshot.hasError || !snapshot.hasData) {
+                        return _IdeaApiStatus.error(
+                          message: snapshot.error is AiApiException
+                              ? (snapshot.error! as AiApiException).message
+                              : '아이디어 진단 결과를 불러오지 못했습니다.',
+                          onRetry: _retry,
+                        );
+                      }
+                      return _EvaluationResult(response: snapshot.data!);
+                    },
                   ),
-                  const SizedBox(height: 42),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.fromLTRB(32, 24, 32, 26),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(18),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          K.h('{ng,i,b}{r,yeo,g}{h,a,n} idea'),
-                          style: const TextStyle(fontSize: 18, color: Color(0xFF868891)),
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          idea,
-                          style: const TextStyle(fontSize: 19, color: Colors.black, height: 1.45),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  Container(
-                    width: double.infinity,
-                    height: 360,
-                    padding: const EdgeInsets.fromLTRB(32, 28, 32, 32),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(18),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Text(
-                              K.h('{ng,i,l}{b,u} {b,o}{ng,wa,n}{ng,i} {p,i,l}{ng,yo}{h,ae}{ng,yo}'),
-                              style: const TextStyle(fontSize: 27, fontWeight: FontWeight.w800, color: Colors.black),
-                            ),
-                            const SizedBox(width: 16),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 9),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFF0F0FF),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                K.h('{ch,o}{g,i} remodeling {b,i}{ng,yo,ng} {b,a,l}{s,ae,ng}'),
-                                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: _primary),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 34),
-                        Text(
-                          K.h('{ng,a}{p,a}{t,eu} {d,a,n}{j,i}{g,a} {g,a}{kk,a,b}{g,o} {ng,yu}{ng,a} {ng,i,n}{g,u}{g,a} {m,a,n}{ng,eu}{m,yeo} {s,i}{s,eo,l}{d,o} {ng,ya,ng}{h,o}{h,a,b}{n,i}{d,a}. {g,o,ng}{g,a,n} {j,o}{g,eo,n}{ng,wa} {j,i}{ng,yeo,g} {s,u}{ng,yo}{r,eu,l} {g,o}{r,yeo}{h,ae,ss}{ng,eu,l} {tt,ae} {b,a,ng}{h,ya,ng}{s,eo,ng} {j,a}{ch,e}{n,eu,n} {t,a}{d,a,ng}{h,a,b}{n,i}{d,a}.'),
-                          style: const TextStyle(fontSize: 19, height: 1.55, color: Colors.black),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 44),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      _NavButton(
-                        label: K.h('{ng,i}{j,eo,n} {d,a,n}{g,ye}{r,o}'),
-                        icon: Icons.arrow_back,
-                        onPressed: () => Navigator.of(context).pop(),
-                      ),
-                      _NavButton(
-                        label: K.h('{d,a}{ng,eu,m} {d,a,n}{g,ye}{r,o}'),
-                        icon: Icons.arrow_forward,
-                        primary: true,
-                        onPressed: () => Navigator.of(context).pushNamed(ChecklistPage.routeName),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 260),
+                  const SizedBox(height: 170),
                   const Divider(color: Color(0xFFD6D8E0)),
                   const SizedBox(height: 50),
                   const _Footer(),
                   const SizedBox(height: 34),
                 ],
+                  ),
+                ),
               ),
             ),
+        ],
+      ),
+      ),
+    );
+  }
+}
+
+class _EvaluationResult extends StatelessWidget {
+  const _EvaluationResult({required this.response});
+
+  final IdeaEvaluationResponse response;
+
+  @override
+  Widget build(BuildContext context) {
+    final cards = [
+      _ReviewInfoCard(
+        icon: Icons.check_circle_outline,
+        iconColor: const Color(0xFF4CAF78),
+        title: '장점',
+        titleColor: const Color(0xFF4CAF78),
+        items: response.strengths,
+        bulletIcon: Icons.check,
+        bulletColor: const Color(0xFF4CAF78),
+      ),
+      _ReviewInfoCard(
+        icon: Icons.warning_amber_rounded,
+        iconColor: const Color(0xFFFF4E4E),
+        title: '단점',
+        titleColor: const Color(0xFFFF4E4E),
+        items: response.weaknesses,
+        bulletIcon: Icons.circle,
+        bulletColor: const Color(0xFFFF4E4E),
+      ),
+      _ReviewInfoCard(
+        icon: Icons.auto_awesome,
+        iconColor: const Color(0xFF5661E8),
+        title: '대안 활용모델',
+        titleColor: const Color(0xFF5661E8),
+        items: response.alternativeModels,
+        bulletIcon: null,
+        bulletColor: const Color(0xFF5661E8),
+      ),
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'AI 진단 결과',
+          style: TextStyle(fontSize: 34, fontWeight: FontWeight.w800, color: Colors.black),
+        ),
+        const SizedBox(height: 42),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.fromLTRB(32, 24, 32, 24),
+          decoration: BoxDecoration(
+            color: const Color(0xFFEDEDED),
+            borderRadius: BorderRadius.circular(9),
+          ),
+          child: Text(
+            response.idea,
+            style: const TextStyle(fontSize: 18, color: Color(0xFF66676D), height: 1.45, fontWeight: FontWeight.w600),
           ),
         ),
+        const SizedBox(height: 20),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.fromLTRB(32, 26, 32, 26),
+          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(9)),
+          child: Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            runSpacing: 14,
+            children: [
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 830),
+                child: Text(
+                  response.summary,
+                  style: const TextStyle(fontSize: 18, height: 1.5, fontWeight: FontWeight.w600, color: Colors.black),
+                ),
+              ),
+              _GradeBadge(prefix: '적합도: ', grade: response.overallGrade),
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+        _ReviewMetricStrip(metrics: response.metrics),
+        const SizedBox(height: 14),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            if (constraints.maxWidth < 850) {
+              return Column(
+                children: [
+                  cards[0],
+                  const SizedBox(height: 18),
+                  cards[1],
+                  const SizedBox(height: 18),
+                  cards[2],
+                ],
+              );
+            }
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(child: cards[0]),
+                const SizedBox(width: 30),
+                Expanded(child: cards[1]),
+                const SizedBox(width: 30),
+                Expanded(child: cards[2]),
+              ],
+            );
+          },
+        ),
+        const SizedBox(height: 20),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 22),
+          decoration: BoxDecoration(
+            color: const Color(0xFFEDEBFF),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Text(
+            '추천: ${response.recommendation}',
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Color(0xFF5661E8), height: 1.45),
+          ),
+        ),
+        const SizedBox(height: 44),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            _NavButton(
+              label: K.h('{ng,i}{j,eo,n} {d,a,n}{g,ye}{r,o}'),
+              icon: Icons.arrow_back,
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+            _NavButton(
+              label: K.h('{d,a}{ng,eu,m} {d,a,n}{g,ye}{r,o}'),
+              icon: Icons.arrow_forward,
+              primary: true,
+              onPressed: () => Navigator.of(context).pushNamed(
+                ChecklistPage.routeName,
+                arguments: FinalCheckpointArguments.ideaEvaluation(
+                  schoolId: response.schoolId,
+                  analysisId: response.analysisId,
+                  evaluation: response,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _IdeaApiStatus extends StatelessWidget {
+  const _IdeaApiStatus.loading()
+      : message = 'AI가 아이디어를 진단하고 있습니다.',
+        onRetry = null;
+
+  const _IdeaApiStatus.error({required this.message, required this.onRetry});
+
+  final String message;
+  final VoidCallback? onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 500,
+      width: double.infinity,
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (onRetry == null)
+              const CircularProgressIndicator(color: Color(0xFF5661E8))
+            else
+              const Icon(Icons.error_outline, size: 42, color: Color(0xFFFF5A64)),
+            const SizedBox(height: 20),
+            Text(message, style: const TextStyle(fontSize: 18, color: Color(0xFF55575E))),
+            if (onRetry != null) ...[
+              const SizedBox(height: 22),
+              FilledButton(onPressed: onRetry, child: const Text('다시 시도')),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ReviewMetricStrip extends StatelessWidget {
+  const _ReviewMetricStrip({required this.metrics});
+
+  final EvaluationMetrics metrics;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        _ReviewMetric(
+          label: '공간 적합성',
+          evaluation: metrics.spaceSuitability,
+        ),
+        const SizedBox(height: 6),
+        _ReviewMetric(
+          label: '접근성',
+          evaluation: metrics.accessibility,
+        ),
+        const SizedBox(height: 6),
+        _ReviewMetric(
+          label: '지역 수요',
+          evaluation: metrics.regionalDemand,
+        ),
+        const SizedBox(height: 6),
+        _ReviewMetric(
+          label: '유사사례 적합성',
+          evaluation: metrics.similarCaseSuitability,
+        ),
+        const SizedBox(height: 6),
+        _ReviewMetric(
+          label: '실행 리스크',
+          evaluation: metrics.executionFeasibility,
+        ),
+      ],
+    );
+  }
+}
+
+class _ReviewMetric extends StatelessWidget {
+  const _ReviewMetric({
+    required this.label,
+    required this.evaluation,
+  });
+
+  final String label;
+  final MetricEvaluation evaluation;
+
+  @override
+  Widget build(BuildContext context) {
+    final reasons = evaluation.reasons.isEmpty
+        ? const ['평가 이유가 제공되지 않았습니다.']
+        : evaluation.reasons;
+    final reasonText = reasons.join(' ');
+
+    return Container(
+      width: double.infinity,
+      constraints: const BoxConstraints(minHeight: 76),
+      padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 17),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(9),
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final labelWidget = Text(
+            label,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF303137),
+            ),
+          );
+          final reasonWidget = Text(
+            reasonText,
+            style: const TextStyle(
+              fontSize: 15,
+              height: 1.42,
+              color: Color(0xFF5B5D65),
+              fontWeight: FontWeight.w500,
+            ),
+          );
+
+          if (constraints.maxWidth < 720) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(child: labelWidget),
+                    _GradeBadge(grade: evaluation.grade),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                reasonWidget,
+              ],
+            );
+          }
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              SizedBox(width: 165, child: labelWidget),
+              SizedBox(
+                width: 100,
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: _GradeBadge(grade: evaluation.grade),
+                ),
+              ),
+              const SizedBox(width: 18),
+              Expanded(child: reasonWidget),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _GradeBadge extends StatelessWidget {
+  const _GradeBadge({required this.grade, this.prefix = ''});
+
+  final Grade grade;
+  final String prefix;
+
+  @override
+  Widget build(BuildContext context) {
+    final low = grade == Grade.veryLow || grade == Grade.low;
+    final high = grade == Grade.high || grade == Grade.veryHigh;
+    final background = low
+        ? const Color(0xFFFFE3E5)
+        : high
+            ? const Color(0xFFE2F8EF)
+            : const Color(0xFFFFF0BE);
+    final foreground = low
+        ? const Color(0xFFFF4E5B)
+        : high
+            ? const Color(0xFF00A873)
+            : const Color(0xFFC06300);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+      decoration: BoxDecoration(color: background, borderRadius: BorderRadius.circular(99)),
+      child: Text(
+        '$prefix${grade.label}',
+        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: foreground),
+      ),
+    );
+  }
+}
+
+class _ReviewInfoCard extends StatelessWidget {
+  const _ReviewInfoCard({
+    required this.icon,
+    required this.iconColor,
+    required this.title,
+    required this.titleColor,
+    required this.items,
+    required this.bulletIcon,
+    required this.bulletColor,
+  });
+
+  final IconData icon;
+  final Color iconColor;
+  final String title;
+  final Color titleColor;
+  final List<String> items;
+  final IconData? bulletIcon;
+  final Color bulletColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: const BoxConstraints(minHeight: 185),
+      padding: const EdgeInsets.fromLTRB(26, 28, 26, 24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, color: iconColor, size: 21),
+              const SizedBox(width: 10),
+              Text(
+                title,
+                style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: titleColor),
+              ),
+            ],
+          ),
+          const SizedBox(height: 22),
+          for (final item in items) ...[
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (bulletIcon != null) ...[
+                  Padding(
+                    padding: const EdgeInsets.only(top: 3),
+                    child: Icon(bulletIcon, color: bulletColor, size: bulletIcon == Icons.circle ? 8 : 16),
+                  ),
+                  const SizedBox(width: 10),
+                ],
+                Expanded(
+                  child: Text(
+                    item,
+                    style: const TextStyle(fontSize: 17, height: 1.4, color: Color(0xFF222329), fontWeight: FontWeight.w500),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+          ],
+        ],
       ),
     );
   }

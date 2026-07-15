@@ -1,94 +1,114 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
+import '../data/school_data.dart';
 import 'landing_page.dart';
 import 'school_detail_page.dart';
 
-class SchoolSelectionPage extends StatelessWidget {
+class SchoolSelectionPage extends StatefulWidget {
   const SchoolSelectionPage({super.key});
 
   static const routeName = '/school-selection';
   static const _primary = Color(0xFF5661E8);
   static const _ink = Color(0xFF11131A);
   static const _bg = Color(0xFFF7F8FC);
+  static const _headerBg = Color(0xFFFCFDFF);
 
-  static const _schools = [
-    _SchoolCandidate(
-      image: 'assets/images/candidate_01.jpg',
-      name: '{g,yeo,ng}{b,u,g} {ng,yeo,ng}{ng,ya,ng} OO{b,u,n}{g,yo}',
-      chipOne: '{s,a,n}{g,a,n}, {g,ye}{g,o,g} {j,i}{ng,yeo,g}',
-      chipTwo: '{d,ae}{j,i} 3,200m²',
-      note: '{g,u}{j,o} {ng,ya,ng}{h,o}, {ng,o,g}{s,a,ng} {ng,i,l}{b,u} {s,u}{r,i} {p,i,l}{ng,yo}',
-    ),
-    _SchoolCandidate(
-      image: 'assets/images/candidate_02.png',
-      name: '{g,yeo,ng}{b,u,g} {b,o,ng}{h,wa} OO{ch,o}{g,yo}',
-      chipOne: '{s,a,n}{r,i,m} {ng,i,n}{j,eo,b}',
-      chipTwo: '{g,yo}{s,i,l} 8{g,ae}',
-      note: '{ng,u,n}{d,o,ng}{j,a,ng} {h,wa,l}{ng,yo,ng}{s,eo,ng} {n,o,b}{ng,eu,m}',
-    ),
-    _SchoolCandidate(
-      image: 'assets/images/candidate_03.png',
-      name: '{g,yeo,ng}{b,u,g} {ng,ui}{s,eo,ng} OO{h,a,g}{g,yo}',
-      chipOne: '{m,a}{ng,eu,l} {j,u,ng}{s,i,m}{j,i}',
-      chipTwo: '{d,ae}{j,i} 2,650m²',
-      note: '{j,eo,b}{g,eu,n}{s,eo,ng} {ng,ya,ng}{h,o}, {ng,o,g}{ng,oe} {s,u}{r,i} {g,wo,n}{j,a,ng}',
-    ),
+  @override
+  State<SchoolSelectionPage> createState() => _SchoolSelectionPageState();
+}
+
+class _SchoolSelectionPageState extends State<SchoolSelectionPage> {
+  static const _pageSize = 6;
+  static const _firstPageIds = [
+    'school_020_635ebe81',
+    'school_013_ebd790b9',
+    'school_006_399695cc',
+    'school_025_6988acc6',
+    'school_010_33ea8204',
+    'school_038_3e2104df',
   ];
+
+  late final Future<List<SchoolData>> _schoolsFuture = SchoolRepository.loadSchools();
+  int _currentPage = 1;
+
+  List<SchoolData> _orderedSchools(List<SchoolData> schools) {
+    final firstPage = <SchoolData>[];
+    for (final id in _firstPageIds) {
+      final matches = schools.where((school) => school.id == id);
+      if (matches.isNotEmpty) firstPage.add(matches.first);
+    }
+
+    final pinnedIds = firstPage.map((school) => school.id).toSet();
+    final others = schools.where((school) => !pinnedIds.contains(school.id)).toList();
+    return [...firstPage, ...others];
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _bg,
+      backgroundColor: SchoolSelectionPage._bg,
       body: SelectionArea(
         child: SingleChildScrollView(
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 1180),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 28),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 34),
-                    const _BrandHeader(),
-                    const SizedBox(height: 84),
-                    const _StepProgress(),
-                    const SizedBox(height: 88),
-                    const _IntroText(),
-                    const SizedBox(height: 92),
-                    LayoutBuilder(
-                      builder: (context, constraints) {
-                        final compact = constraints.maxWidth < 900;
-                        return compact
-                            ? Column(
-                                children: [
-                                  _CandidateCard(index: 0, candidate: _schools[0]),
-                                  const SizedBox(height: 28),
-                                  _CandidateCard(index: 1, candidate: _schools[1]),
-                                  const SizedBox(height: 28),
-                                  _CandidateCard(index: 2, candidate: _schools[2]),
-                                ],
-                              )
-                            : Row(
-                                children: [
-                                  Expanded(child: _CandidateCard(index: 0, candidate: _schools[0])),
-                                  const SizedBox(width: 48),
-                                  Expanded(child: _CandidateCard(index: 1, candidate: _schools[1])),
-                                  const SizedBox(width: 48),
-                                  Expanded(child: _CandidateCard(index: 2, candidate: _schools[2])),
-                                ],
-                              );
+          child: Stack(
+            children: [
+              const Positioned(
+                left: 0,
+                right: 0,
+                top: 0,
+                height: 92,
+                child: ColoredBox(color: SchoolSelectionPage._headerBg),
+              ),
+              Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 1180),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 28),
+                    child: FutureBuilder<List<SchoolData>>(
+                      future: _schoolsFuture,
+                      builder: (context, snapshot) {
+                        final schools = snapshot.hasData ? _orderedSchools(snapshot.data!) : const <SchoolData>[];
+                        final totalPages = math.max(1, (schools.length / _pageSize).ceil());
+                        final safePage = _currentPage.clamp(1, totalPages).toInt();
+                        final start = (safePage - 1) * _pageSize;
+                        final pageSchools = schools.skip(start).take(_pageSize).toList();
+
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const SizedBox(height: 34),
+                            const _BrandHeader(),
+                            const SizedBox(height: 84),
+                            const _StepProgress(),
+                            const SizedBox(height: 88),
+                            const _IntroText(),
+                            const SizedBox(height: 92),
+                            if (snapshot.connectionState == ConnectionState.waiting)
+                              const _LoadingCards()
+                            else if (snapshot.hasError)
+                              const _LoadFailed()
+                            else
+                              _CandidateGrid(schools: pageSchools),
+                            const SizedBox(height: 34),
+                            _Pagination(
+                              currentPage: safePage,
+                              totalPages: totalPages,
+                              onChanged: (page) => setState(() => _currentPage = page),
+                            ),
+                            const SizedBox(height: 110),
+                            const Divider(color: Color(0xFFD6D8E0)),
+                            const SizedBox(height: 50),
+                            const _Footer(),
+                            const SizedBox(height: 34),
+                          ],
+                        );
                       },
                     ),
-                    const SizedBox(height: 210),
-                    const Divider(color: Color(0xFFD6D8E0)),
-                    const SizedBox(height: 50),
-                    const _Footer(),
-                    const SizedBox(height: 34),
-                  ],
+                  ),
                 ),
               ),
-            ),
+            ],
           ),
         ),
       ),
@@ -193,11 +213,39 @@ class _IntroText extends StatelessWidget {
   }
 }
 
-class _CandidateCard extends StatefulWidget {
-  const _CandidateCard({required this.index, required this.candidate});
+class _CandidateGrid extends StatelessWidget {
+  const _CandidateGrid({required this.schools});
 
-  final int index;
-  final _SchoolCandidate candidate;
+  final List<SchoolData> schools;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final columns = constraints.maxWidth < 760 ? 1 : (constraints.maxWidth < 1040 ? 2 : 3);
+        const gap = 30.0;
+        final width = (constraints.maxWidth - gap * (columns - 1)) / columns;
+
+        return Wrap(
+          spacing: gap,
+          runSpacing: 30,
+          children: [
+            for (final school in schools)
+              SizedBox(
+                width: width,
+                child: _CandidateCard(school: school),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _CandidateCard extends StatefulWidget {
+  const _CandidateCard({required this.school});
+
+  final SchoolData school;
 
   @override
   State<_CandidateCard> createState() => _CandidateCardState();
@@ -206,8 +254,31 @@ class _CandidateCard extends StatefulWidget {
 class _CandidateCardState extends State<_CandidateCard> {
   bool _hovered = false;
 
+  String get _landText {
+    final area = widget.school.landAreaSqm;
+    if (area != null) return '${_formatNumber(area)}m²';
+    final text = widget.school.landAreaText.trim();
+    if (text.isNotEmpty && text != '-') return '${text.replaceAll('m²', '').trim()}m²';
+    return K.h('{d,ae}{j,i} {j,eo,ng}{b,o} {h,wa,g}{ng,i,n} {p,i,l}{ng,yo}');
+  }
+
+  String get _regionText {
+    final parts = widget.school.address.split(RegExp(r'\s+')).where((part) => part.trim().isNotEmpty).toList();
+    if (parts.length >= 2) return '${parts[0]} ${parts[1]}';
+    if (parts.isNotEmpty) return parts.first;
+    return widget.school.region;
+  }
+
+  String get _note {
+    final plan = widget.school.plan.trim();
+    if (plan.isNotEmpty && plan != '-') return plan;
+    return K.h('{g,u}{j,o} {ng,ya,ng}{h,o}, {s,i}{s,eo,l} {j,eo,m}{g,eo,m} {p,i,l}{ng,yo}');
+  }
+
   @override
   Widget build(BuildContext context) {
+    final image = widget.school.image;
+
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       onEnter: (_) => setState(() => _hovered = true),
@@ -219,7 +290,7 @@ class _CandidateCardState extends State<_CandidateCard> {
         child: GestureDetector(
           onTap: () => Navigator.of(context).pushNamed(
             SchoolDetailPage.routeName,
-            arguments: widget.index,
+            arguments: widget.school.id,
           ),
           child: AspectRatio(
             aspectRatio: 1.02,
@@ -239,7 +310,14 @@ class _CandidateCardState extends State<_CandidateCard> {
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
-                    Image.asset(widget.candidate.image, fit: BoxFit.cover),
+                    if (image == null || image.isEmpty)
+                      const _DefaultSchoolImage()
+                    else
+                      Image.asset(
+                        image,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) => const _DefaultSchoolImage(),
+                      ),
                     const DecoratedBox(
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
@@ -257,7 +335,9 @@ class _CandidateCardState extends State<_CandidateCard> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            K.h(widget.candidate.name),
+                            widget.school.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                             style: const TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w700),
                           ),
                           const SizedBox(height: 17),
@@ -265,13 +345,15 @@ class _CandidateCardState extends State<_CandidateCard> {
                             spacing: 12,
                             runSpacing: 9,
                             children: [
-                              _ChipLabel(text: K.h(widget.candidate.chipOne)),
-                              _ChipLabel(text: K.h(widget.candidate.chipTwo)),
+                              _ChipLabel(text: _regionText),
+                              _ChipLabel(text: _landText),
                             ],
                           ),
                           const SizedBox(height: 19),
                           Text(
-                            K.h(widget.candidate.note),
+                            _note,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                             style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500),
                           ),
                         ],
@@ -284,6 +366,19 @@ class _CandidateCardState extends State<_CandidateCard> {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _DefaultSchoolImage extends StatelessWidget {
+  const _DefaultSchoolImage();
+
+  @override
+  Widget build(BuildContext context) {
+    return Image.asset(
+      'assets/images/default_school.png',
+      fit: BoxFit.cover,
+      alignment: Alignment.center,
     );
   }
 }
@@ -303,7 +398,130 @@ class _ChipLabel extends StatelessWidget {
       ),
       child: Text(
         text,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
         style: const TextStyle(color: SchoolSelectionPage._primary, fontSize: 14, fontWeight: FontWeight.w600),
+      ),
+    );
+  }
+}
+
+class _Pagination extends StatelessWidget {
+  const _Pagination({
+    required this.currentPage,
+    required this.totalPages,
+    required this.onChanged,
+  });
+
+  final int currentPage;
+  final int totalPages;
+  final ValueChanged<int> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final visiblePages = math.min(10, totalPages);
+
+    return Center(
+      child: Wrap(
+        alignment: WrapAlignment.center,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        spacing: 10,
+        children: [
+          _PageButton(
+            label: '<',
+            enabled: currentPage > 1,
+            onTap: () => onChanged(currentPage - 1),
+          ),
+          for (var page = 1; page <= visiblePages; page++)
+            _PageButton(
+              label: '$page',
+              selected: page == currentPage,
+              onTap: () => onChanged(page),
+            ),
+          _PageButton(
+            label: '>',
+            enabled: currentPage < totalPages,
+            onTap: () => onChanged(currentPage + 1),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PageButton extends StatelessWidget {
+  const _PageButton({
+    required this.label,
+    required this.onTap,
+    this.selected = false,
+    this.enabled = true,
+  });
+
+  final String label;
+  final VoidCallback onTap;
+  final bool selected;
+  final bool enabled;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(99),
+      onTap: enabled ? onTap : null,
+      child: Container(
+        width: 30,
+        height: 30,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: selected ? SchoolSelectionPage._primary : Colors.transparent,
+          borderRadius: BorderRadius.circular(99),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: selected
+                ? Colors.white
+                : enabled
+                    ? const Color(0xFF777980)
+                    : const Color(0xFFC5C6CB),
+            fontSize: 14,
+            fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _LoadingCards extends StatelessWidget {
+  const _LoadingCards();
+
+  @override
+  Widget build(BuildContext context) {
+    return const SizedBox(
+      height: 410,
+      child: Center(
+        child: CircularProgressIndicator(color: SchoolSelectionPage._primary),
+      ),
+    );
+  }
+}
+
+class _LoadFailed extends StatelessWidget {
+  const _LoadFailed();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(32),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFE2E3EA)),
+      ),
+      child: const Text(
+        'Data load failed',
+        style: TextStyle(fontSize: 18, color: Color(0xFF777980)),
       ),
     );
   }
@@ -330,18 +548,12 @@ class _Footer extends StatelessWidget {
   static const _style = TextStyle(fontSize: 13, color: Color(0xFF777980), fontWeight: FontWeight.w500);
 }
 
-class _SchoolCandidate {
-  const _SchoolCandidate({
-    required this.image,
-    required this.name,
-    required this.chipOne,
-    required this.chipTwo,
-    required this.note,
-  });
-
-  final String image;
-  final String name;
-  final String chipOne;
-  final String chipTwo;
-  final String note;
+String _formatNumber(num value) {
+  final text = value.round().toString();
+  final buffer = StringBuffer();
+  for (var i = 0; i < text.length; i++) {
+    if (i > 0 && (text.length - i) % 3 == 0) buffer.write(',');
+    buffer.write(text[i]);
+  }
+  return buffer.toString();
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../data/school_data.dart';
 import 'ai_recommendation_page.dart';
 import 'idea_input_page.dart';
 import 'landing_page.dart';
@@ -16,29 +17,31 @@ class IdeaPage extends StatefulWidget {
 class _IdeaPageState extends State<IdeaPage> {
   static const _primary = Color(0xFF5661E8);
   static const _bg = Color(0xFFF7F8FC);
-  static const _schoolNames = [
-    '{g,yeo,ng}{b,u,g} {ng,yeo,ng}{ng,ya,ng} OO{b,u,n}{g,yo}',
-    '{g,yeo,ng}{b,u,g} {b,o,ng}{h,wa} OO{ch,o}{g,yo}',
-    '{g,yeo,ng}{b,u,g} {ng,ui}{s,eo,ng} OO{h,a,g}{g,yo}',
-  ];
-
   int? _selected;
 
   @override
   Widget build(BuildContext context) {
-    final schoolIndex = ((ModalRoute.of(context)?.settings.arguments as int?) ?? 0)
-        .clamp(0, _schoolNames.length - 1)
-        .toInt();
+    final argument = ModalRoute.of(context)?.settings.arguments;
+    final schoolId = argument is String ? argument : '';
 
     return Scaffold(
       backgroundColor: _bg,
       body: SingleChildScrollView(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 1180),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 28),
-              child: Column(
+        child: Stack(
+          children: [
+          const Positioned(
+            left: 0,
+            right: 0,
+            top: 0,
+            height: 92,
+            child: ColoredBox(color: Color(0xFFFCFDFF)),
+          ),
+            Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 1180),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 28),
+                  child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const SizedBox(height: 34),
@@ -46,20 +49,26 @@ class _IdeaPageState extends State<IdeaPage> {
                   const SizedBox(height: 84),
                   const _StepProgress(),
                   const SizedBox(height: 88),
-                  Text.rich(
-                    TextSpan(
-                      children: [
+                  FutureBuilder<SchoolData>(
+                    future: SchoolRepository.loadSchool(schoolId),
+                    builder: (context, snapshot) {
+                      final schoolName = snapshot.data?.name ?? '';
+                      return Text.rich(
                         TextSpan(
-                          text: '${K.h(_schoolNames[schoolIndex])}\n',
-                          style: const TextStyle(fontWeight: FontWeight.w800),
+                          children: [
+                            TextSpan(
+                              text: schoolName.isEmpty ? '' : '$schoolName\n',
+                              style: const TextStyle(fontWeight: FontWeight.w800),
+                            ),
+                            TextSpan(
+                              text: K.h('{h,wa,l}{ng,yo,ng}{h,a}{g,o}{j,a} {h,a}{n,eu,n} idea{g,a} {ng,i,ss}{ng,eu}{s,i,n}{g,a}{ng,yo}?'),
+                              style: const TextStyle(fontWeight: FontWeight.w400),
+                            ),
+                          ],
                         ),
-                        TextSpan(
-                          text: K.h('{h,wa,l}{ng,yo,ng}{h,a}{g,o}{j,a} {h,a}{n,eu,n} idea{g,a} {ng,i,ss}{ng,eu}{s,i,n}{g,a}{ng,yo}?'),
-                          style: const TextStyle(fontWeight: FontWeight.w400),
-                        ),
-                      ],
-                    ),
-                    style: const TextStyle(fontSize: 34, height: 1.35, color: Colors.black, letterSpacing: 0),
+                        style: const TextStyle(fontSize: 34, height: 1.35, color: Colors.black, letterSpacing: 0),
+                      );
+                    },
                   ),
                   const SizedBox(height: 148),
                   LayoutBuilder(
@@ -119,7 +128,7 @@ class _IdeaPageState extends State<IdeaPage> {
                                   _selected == 0
                                       ? AiRecommendationPage.routeName
                                       : IdeaInputPage.routeName,
-                                  arguments: schoolIndex,
+                                  arguments: schoolId,
                                 );
                               },
                       ),
@@ -131,10 +140,12 @@ class _IdeaPageState extends State<IdeaPage> {
                   const _Footer(),
                   const SizedBox(height: 34),
                 ],
+                  ),
+                ),
               ),
             ),
-          ),
-        ),
+        ],
+      ),
       ),
     );
   }

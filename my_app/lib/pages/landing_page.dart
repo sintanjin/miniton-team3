@@ -375,122 +375,23 @@ class _PrimaryButton extends StatelessWidget {
 class _AnalysisCard extends StatelessWidget {
   const _AnalysisCard();
 
-  static const rows = [
-    ('{g,o,ng}{g,a,n} {b,u,n}{s,eo,g}', '{g,yo}{s,i,l}, {ng,u,n}{d,o,ng}{j,a,ng}, {b,u}{j,i} {h,wa,l}{ng,yo,ng}{d,o} {p,yeo,ng}{g,a}'),
-    ('{j,i}{ng,yeo,g} {b,u,n}{s,eo,g}', '{ng,i,n}{g,u}, {j,eo,b}{g,eu,n}{s,eo,ng}, {j,u}{b,yeo,n} {j,a}{ng,wo,n} {b,u,n}{s,eo,g}'),
-    ('{s,u}{ng,yo} {b,u,n}{s,eo,g}', '{j,i}{ng,yeo,g} {s,u}{ng,yo}{ng,wa} {ng,yu}{s,a} {s,a}{r,ye} {b,u,n}{s,eo,g}'),
-    ('{s,i}{s,eo,l} {b,u,n}{s,eo,g}', '{g,eo,n}{m,u,l} {s,a,ng}{t,ae}, remodeling {p,i,l}{ng,yo}{d,o} {p,yeo,ng}{g,a}'),
-    ('{j,o,ng}{h,a,b} {j,i,n}{d,a,n}', '{h,wa,l}{ng,yo,ng}{m,o}{d,e,l} {ch,u}{ch,eo,n} {m,i,ch} {s,i,l}{h,ae,ng} checklist'),
-  ];
-
   @override
   Widget build(BuildContext context) {
     return Container(
-      constraints: const BoxConstraints(maxWidth: 510),
-      padding: const EdgeInsets.fromLTRB(26, 27, 26, 22),
+      constraints: const BoxConstraints(maxWidth: 520),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(.9),
-        borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF5C6380).withOpacity(.12),
-            blurRadius: 30,
-            offset: const Offset(0, 14),
+            color: Colors.black.withOpacity(.08),
+            blurRadius: 18,
+            spreadRadius: -14,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              const _IconTile(icon: Icons.auto_awesome, size: 34, iconSize: 18),
-              const SizedBox(width: 12),
-              Text(
-                K.h('AI {b,u,n}{s,eo,g} {h,a,n}{n,u,n}{ng,e} {b,o}{g,i}'),
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          ...List.generate(
-            rows.length,
-            (index) => Container(
-              padding: const EdgeInsets.symmetric(vertical: 13),
-              decoration: const BoxDecoration(
-                border: Border(top: BorderSide(color: Color(0xFFE8E9EF))),
-              ),
-              child: Row(
-                children: [
-                  SizedBox(
-                    width: 36,
-                    child: Text(
-                      '${index + 1}',
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.w600,
-                        color: LandingPage._primary,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 13),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          K.h(rows[index].$1),
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w700,
-                            fontSize: 14,
-                          ),
-                        ),
-                        const SizedBox(height: 3),
-                        Text(
-                          K.h(rows[index].$2),
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: Color(0xFF5B5D67),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF1F0FF),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Row(
-                      children: [
-                        Text(
-                          K.h('{b,u,n}{s,eo,g} {ng,wa,n}{r,yo}'),
-                          style: const TextStyle(fontSize: 11, color: LandingPage._primary),
-                        ),
-                        const SizedBox(width: 5),
-                        const Icon(Icons.check, size: 13, color: LandingPage._primary),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              const Icon(Icons.auto_awesome, size: 18, color: LandingPage._primary),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  K.h('1{b,u,n}{ng,i}{m,yeo,n} {j,eo,g}{h,a,b}{h,a,n} {p,ye}{g,yo} {h,wa,l}{ng,yo,ng} {b,a,ng}{ng,a,n}{ng,eu,l} {h,wa,g}{ng,i,n}{h,a,l} {s,u} {ng,i,ss}{ng,eo}{ng,yo}!'),
-                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-                ),
-              ),
-            ],
-          ),
-        ],
+      child: Image.asset(
+        'assets/images/ai_analysis_preview.png',
+        fit: BoxFit.contain,
       ),
     );
   }
